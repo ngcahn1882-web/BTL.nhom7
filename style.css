@@ -1,0 +1,101 @@
+/* ========================================================
+   RUBIES SHOP - GLOBAL STYLESHEET
+   ======================================================== */
+
+:root {
+    --primary-color: #8B1A2F;      /* Màu đỏ rượu chuẩn nhận diện của Rubies */
+    --primary-hover: #6d1425;
+    --text-main: #222222;
+    --text-muted: #777777;
+    --border-color: #e5e5e5;
+    --bg-light: #f9f9f9;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    color: var(--text-main);
+    background-color: #ffffff;
+    line-height: 1.6;
+}
+
+/* 1. Header & Navigation */
+.navbar-brand {
+    letter-spacing: 2px;
+}
+
+/* 2. Nút bấm biến thể (Màu sắc & Size) */
+.color-btn, .size-btn {
+    min-width: 42px;
+    height: 38px;
+    border-radius: 4px;
+    font-weight: 500;
+    font-size: 14px;
+    transition: all 0.2s ease-in-out;
+}
+
+.color-btn:hover, .size-btn:hover {
+    background-color: #f1f1f1;
+    color: #000;
+}
+
+.color-btn.btn-dark, .size-btn.btn-dark {
+    background-color: #111 !important;
+    color: #fff !important;
+    border-color: #111 !important;
+}
+
+/* 3. Khung ảnh chi tiết sản phẩm */
+.main-image-container {
+    background: #fdfdfd;
+}
+
+#main-product-img {
+    transition: transform 0.3s ease;
+}
+
+/* 4. Thẻ sản phẩm ngoài danh mục & Trang chủ */
+.card-product {
+    border: none;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card-product:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(0,0,0,0.06);
+}
+
+.card-product img {
+    height: 340px;
+    object-fit: cover;
+    border-radius: 4px;
+}
+
+/* 5. Nút bấm Mua hàng & Giỏ hàng */
+.btn-danger {
+    background-color: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
+}
+
+.btn-danger:hover {
+    background-color: var(--primary-hover) !important;
+    border-color: var(--primary-hover) !important;
+}
+
+.btn-outline-danger {
+    color: var(--primary-color) !important;
+    border-color: var(--primary-color) !important;
+}
+
+.btn-outline-danger:hover {
+    background-color: var(--primary-color) !important;
+    color: #fff !important;
+}
+
+/* 6. Trạng thái và Badge */
+.status-badge {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    color: #fff;
+    font-weight: 500;
+}
