@@ -144,6 +144,12 @@ function checkStock() {
 }
 
 function handleBuy(action) {
+    <?php if (!isset($_SESSION['user'])): ?>
+        alert('Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng!');
+        window.location.href = 'index.php?url=auth/login';
+        return;
+    <?php endif; ?>
+
     const color = document.getElementById('selected_color')?.value;
     const size  = document.getElementById('selected_size')?.value;
     const qty   = document.getElementById('quantity')?.value || 1;
@@ -253,7 +259,7 @@ function toggleFavorite(productId) {
 
                     <div class="mb-3">
                         <label class="form-label fw-semibold small">Tải lên hình ảnh thực tế (nếu có):</label>
-                        <input type="file" name="review_image" class="form-control form-control-sm" accept="image/*" id="review-img-input" style="max-width: 350px;">
+                        <input type="file" name="review_image" class="form-control form-control-sm" accept="image/jpeg,image/png,image/webp" id="review-img-input" style="max-width: 350px;">
                         <div id="review-img-preview" class="mt-2"></div>
                     </div>
 
@@ -405,25 +411,39 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // 2. Xem trước ảnh đánh giá khi người dùng tải file lên
+// 2. Xem trước ảnh đánh giá + Nút xóa nếu chọn nhầm
     const imgInput = document.getElementById('review-img-input');
     const imgPreview = document.getElementById('review-img-preview');
     if (imgInput && imgPreview) {
-        imgInput.addEventListener('change', function(e) {
+        imgInput.addEventListener('change', function() {
             imgPreview.innerHTML = '';
             if (this.files && this.files[0]) {
+                const file = this.files[0];
+                if (!file.type.startsWith('image/')) {
+                    alert('Vui lòng chỉ chọn tệp hình ảnh (JPG, PNG, WEBP)!');
+                    this.value = '';
+                    return;
+                }
                 const reader = new FileReader();
                 reader.onload = function(ev) {
                     imgPreview.innerHTML = `
-                        <img src="${ev.target.result}" class="rounded border shadow-sm" style="width: 80px; height: 80px; object-fit: cover;">
-                        <small class="text-muted ms-2">Ảnh đã chọn</small>
+                        <div class="position-relative d-inline-block mt-1">
+                            <img src="${ev.target.result}" class="rounded border shadow-sm" style="width: 110px; height: 110px; object-fit: cover;">
+                            <button type="button" id="btn-remove-rev-img" class="btn btn-danger btn-sm rounded-circle position-absolute top-0 end-0 translate-middle p-0 d-flex align-items-center justify-content-center shadow" style="width: 22px; height: 22px;" title="Xóa ảnh đã chọn">
+                                <i class="fa-solid fa-xmark" style="font-size: 11px;"></i>
+                            </button>
+                        </div>
+                        <div class="small text-success mt-1"><i class="fa-solid fa-check me-1"></i>Xem trước ảnh (bấm dấu ✕ để chọn lại nếu nhầm)</div>
                     `;
+                    document.getElementById('btn-remove-rev-img').addEventListener('click', function() {
+                        imgInput.value = '';
+                        imgPreview.innerHTML = '';
+                    });
                 };
-                reader.readAsDataURL(this.files[0]);
+                reader.readAsDataURL(file);
             }
         });
     }
-});
 </script>
 
 <?php require_once 'views/layouts/footer.php'; ?>

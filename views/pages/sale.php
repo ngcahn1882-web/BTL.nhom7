@@ -49,6 +49,32 @@
             </div>
         <?php endif; ?>
     </div>
+
+    <!-- THANH PHÂN TRANG KHUYẾN MẠI -->
+    <?php if (!empty($totalPages) && $totalPages > 1): ?>
+        <nav aria-label="Phân trang khuyến mại" class="mt-5">
+            <ul class="pagination justify-content-center">
+                <li class="page-item <?= ($currentPage <= 1) ? 'disabled' : '' ?>">
+                    <a class="page-link text-dark" href="index.php?url=page/sale&page=<?= max(1, $currentPage - 1) ?>">
+                        <i class="fa-solid fa-chevron-left small"></i>
+                    </a>
+                </li>
+                <?php for ($i = 1; $i <= $totalPages; $i++): ?>
+                    <li class="page-item <?= ($i == $currentPage) ? 'active' : '' ?>">
+                        <a class="page-link <?= ($i == $currentPage) ? 'bg-danger border-danger text-white' : 'text-dark' ?>" 
+                           href="index.php?url=page/sale&page=<?= $i ?>">
+                            <?= $i ?>
+                        </a>
+                    </li>
+                <?php endfor; ?>
+                <li class="page-item <?= ($currentPage >= $totalPages) ? 'disabled' : '' ?>">
+                    <a class="page-link text-dark" href="index.php?url=page/sale&page=<?= min($totalPages, $currentPage + 1) ?>">
+                        <i class="fa-solid fa-chevron-right small"></i>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    <?php endif; ?>
 </div>
 
 <?php require_once 'views/layouts/footer.php'; ?>

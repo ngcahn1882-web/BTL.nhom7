@@ -42,7 +42,9 @@
         <div class="col-lg-9">
             <div class="d-flex justify-content-between align-items-center mb-4">
                 <h4 class="fw-bold text-uppercase mb-0"><?= htmlspecialchars($catName) ?></h4>
-                <span class="text-muted small">Hiển thị <strong><?= count($products) ?></strong> sản phẩm</span>
+                <span class="text-muted small">
+                    Hiển thị <strong><?= count($products) ?></strong> / <strong><?= $totalProducts ?? count($products) ?></strong> sản phẩm
+                </span>
             </div>
 
             <div class="row row-cols-2 row-cols-md-3 g-4">
@@ -51,7 +53,7 @@
                         <?php 
                             $images = explode(',', $p['image'] ?? '');
                             $thumb = trim($images[0] ?? 'default.jpg');
-                            $hasDiscount = (!empty($p['sale_price']) && (float)$p['sale_price'] > 0);
+                            $hasDiscount = (!empty($p['sale_price']) && (float)$p['sale_price'] > 0 && (float)$p['price'] > 0);
                         ?>
                         <div class="col">
                             <div class="card card-product h-100 position-relative border-0 shadow-sm">
@@ -94,6 +96,38 @@
                     </div>
                 <?php endif; ?>
             </div>
+
+            <!-- THANH PHÂN TRANG (PAGINATION) -->
+            <?php if (!empty($totalPages) && $totalPages > 1): ?>
+                <?php $baseUrl = ($currentId > 0) ? "index.php?url=category/index/{$currentId}" : "index.php?url=category/index"; ?>
+                <nav aria-label="Phân trang sản phẩm" class="mt-5">
+                    <ul class="pagination justify-content-center">
+                        <!-- Nút Trước -->
+                        <li class="page-item <?= ($currentPage <= 1) ? 'disabled' : '' ?>">
+                            <a class="page-link text-dark" href="<?= $baseUrl ?>&page=<?= max(1, $currentPage - 1) ?>">
+                                <i class="fa-solid fa-chevron-left small"></i>
+                            </a>
+                        </li>
+
+                        <!-- Các số trang -->
+                        <?php for ($i = 1; $i <= $totalPages; $i++): ?>
+                            <li class="page-item <?= ($i == $currentPage) ? 'active' : '' ?>">
+                                <a class="page-link <?= ($i == $currentPage) ? 'bg-danger border-danger text-white' : 'text-dark' ?>" 
+                                   href="<?= $baseUrl ?>&page=<?= $i ?>">
+                                    <?= $i ?>
+                                </a>
+                            </li>
+                        <?php endfor; ?>
+
+                        <!-- Nút Sau -->
+                        <li class="page-item <?= ($currentPage >= $totalPages) ? 'disabled' : '' ?>">
+                            <a class="page-link text-dark" href="<?= $baseUrl ?>&page=<?= min($totalPages, $currentPage + 1) ?>">
+                                <i class="fa-solid fa-chevron-right small"></i>
+                            </a>
+                        </li>
+                    </ul>
+                </nav>
+            <?php endif; ?>
         </div>
     </div>
 </div>

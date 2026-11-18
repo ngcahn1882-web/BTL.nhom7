@@ -35,15 +35,26 @@ class FavoriteModel {
         }
     }
 
-    // 3. Lấy danh sách sản phẩm yêu thích của user
-    public function getUserFavorites(int $userId): array {
+    // 3. Đếm tổng số sản phẩm yêu thích để phân trang
+    public function countUserFavorites(int $userId): int {
+        $stmt = $this->db->prepare("SELECT COUNT(*) FROM favorites WHERE user_id = ?");
+        $stmt->execute([$userId]);
+        return (int)$stmt->fetchColumn();
+    }
+
+    // 4. Lấy danh sách sản phẩm yêu thích có phân trang
+    public function getUserFavorites(int $userId, int $limit = 8, int $offset = 0): array {
         $stmt = $this->db->prepare("
             SELECT p.* FROM favorites f
             JOIN products p ON f.product_id = p.id
             WHERE f.user_id = ?
             ORDER BY f.id DESC
+            LIMIT ? OFFSET ?
         ");
-        $stmt->execute([$userId]);
+        $stmt->bindValue(1, $userId, PDO::PARAM_INT);
+        $stmt->bindValue(2, $limit, PDO::PARAM_INT);
+        $stmt->bindValue(3, $offset, PDO::PARAM_INT);
+        $stmt->execute();
         return $stmt->fetchAll();
     }
 }

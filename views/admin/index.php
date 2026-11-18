@@ -276,7 +276,7 @@ function statusLabel($status) {
             <?php elseif ($tab === 'orders'): ?>
             <div class="admin-card">
                 <div class="admin-card-header">
-                    <h5 class="fw-bold mb-0">Tất cả đơn hàng (<?= count($orders); ?>)</h5>
+                    <h5 class="fw-bold mb-0">Tất cả đơn hàng (<?= $stat_orders; ?>)</h5>
                 </div>
                 <table class="admin-table">
                     <thead>
@@ -329,11 +329,34 @@ function statusLabel($status) {
                     </tbody>
                 </table>
             </div>
-
+            <?php if (!empty($adminTotalPages) && $adminTotalPages > 1): ?>
+        <nav aria-label="Phân trang đơn hàng" class="mt-3">
+            <ul class="pagination pagination-sm justify-content-end mb-0">
+                <li class="page-item <?= ($adminPage <= 1) ? 'disabled' : '' ?>">
+                    <a class="page-link text-dark" href="index.php?url=admin/index&tab=<?= htmlspecialchars($tab) ?>&page=<?= max(1, $adminPage - 1) ?>">
+                        &laquo; Trước
+                    </a>
+                </li>
+                <?php for ($i = 1; $i <= $adminTotalPages; $i++): ?>
+                    <li class="page-item <?= ($i == $adminPage) ? 'active' : '' ?>">
+                        <a class="page-link <?= ($i == $adminPage) ? 'bg-danger border-danger text-white' : 'text-dark' ?>" 
+                           href="index.php?url=admin/index&tab=<?= htmlspecialchars($tab) ?>&page=<?= $i ?>">
+                            <?= $i ?>
+                        </a>
+                    </li>
+                <?php endfor; ?>
+                <li class="page-item <?= ($adminPage >= $adminTotalPages) ? 'disabled' : '' ?>">
+                    <a class="page-link text-dark" href="index.php?url=admin/index&tab=<?= htmlspecialchars($tab) ?>&page=<?= min($adminTotalPages, $adminPage + 1) ?>">
+                        Sau &raquo;
+                    </a>
+                </li>
+            </ul>
+        </nav>
+    <?php endif; ?>
             <!-- =============================== 3. SẢN PHẨM =============================== -->
             <?php elseif ($tab === 'products'): ?>
             <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="fw-bold mb-0">Sản phẩm (<?= count($products); ?>)</h5>
+                <h5 class="fw-bold mb-0">Sản phẩm (<?= $stat_products; ?>)</h5>
                 <a href="index.php?url=admin/index&tab=add_product" class="btn-admin-primary">
                     <i class="fa-solid fa-plus me-2"></i>Thêm sản phẩm
                 </a>
@@ -374,6 +397,30 @@ function statusLabel($status) {
                     </tbody>
                 </table>
             </div>
+            <?php if (!empty($adminTotalPages) && $adminTotalPages > 1): ?>
+            <nav aria-label="Phân trang sản phẩm" class="mt-3">
+                <ul class="pagination pagination-sm justify-content-end mb-0">
+                    <li class="page-item <?= ($adminPage <= 1) ? 'disabled' : '' ?>">
+                        <a class="page-link text-dark" href="index.php?url=admin/index&tab=<?= htmlspecialchars($tab) ?>&page=<?= max(1, $adminPage - 1) ?>">
+                            &laquo; Trước
+                        </a>
+                    </li>
+                    <?php for ($i = 1; $i <= $adminTotalPages; $i++): ?>
+                        <li class="page-item <?= ($i == $adminPage) ? 'active' : '' ?>">
+                            <a class="page-link <?= ($i == $adminPage) ? 'bg-danger border-danger text-white' : 'text-dark' ?>" 
+                               href="index.php?url=admin/index&tab=<?= htmlspecialchars($tab) ?>&page=<?= $i ?>">
+                                <?= $i ?>
+                            </a>
+                        </li>
+                    <?php endfor; ?>
+                    <li class="page-item <?= ($adminPage >= $adminTotalPages) ? 'disabled' : '' ?>">
+                        <a class="page-link text-dark" href="index.php?url=admin/index&tab=<?= htmlspecialchars($tab) ?>&page=<?= min($adminTotalPages, $adminPage + 1) ?>">
+                            Sau &raquo;
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+        <?php endif; ?>
 
             <!-- =============================== 4. THÊM SẢN PHẨM =============================== -->
             <?php elseif ($tab === 'add_product'): ?>
@@ -652,38 +699,23 @@ function statusLabel($status) {
                 </form>
             </div>
 
-            <!-- =============================== 8. YÊU CẦU HỦY / HOÀN =============================== -->
+<!-- =============================== 8. YÊU CẦU HỦY / HOÀN =============================== -->
             <?php elseif ($tab === 'requests'): ?>
             <?php
-            $cancels = $pdo->query("
-                SELECT oc.*, o.fullname, o.total, u.name as user_name
-                FROM order_cancellations oc
-                JOIN orders o ON oc.order_id = o.id
-                JOIN users u ON oc.user_id = u.id
-                ORDER BY oc.created_at DESC
-            ")->fetchAll();
-
-            $returns = $pdo->query("
-                SELECT or2.*, o.fullname, o.total, u.name as user_name
-                FROM order_returns or2
-                JOIN orders o ON or2.order_id = o.id
-                JOIN users u ON or2.user_id = u.id
-                ORDER BY or2.created_at DESC
-            ")->fetchAll();
             $colors = ['pending'=>'#f39c12','approved'=>'#27ae60','rejected'=>'#e74c3c'];
             $labels = ['pending'=>'Chờ duyệt','approved'=>'Đã duyệt','rejected'=>'Từ chối'];
             ?>
             <div class="admin-card mb-4">
-                <div class="admin-card-header"><h5 class="fw-bold mb-0">Yêu cầu hủy đơn (<?= count($cancels); ?>)</h5></div>
+                <div class="admin-card-header"><h5 class="fw-bold mb-0">Yêu cầu hủy đơn (<?= $totalCancels; ?>)</h5></div>
                 <table class="admin-table">
                     <thead><tr><th>Đơn #</th><th>Khách hàng</th><th>Lý do</th><th>Tổng tiền</th><th>Ngày gửi</th><th>Trạng thái</th><th></th></tr></thead>
                     <tbody>
-                    <?php foreach ($cancels as $c): ?>
+                    <?php foreach ($cancellations as $c): ?>
                     <tr>
                         <td><strong>#<?= $c['order_id']; ?></strong></td>
-                        <td><?= htmlspecialchars($c['fullname']); ?><br><span style="font-size:12px;color:#aaa;"><?= htmlspecialchars($c['user_name']); ?></span></td>
+                        <td><?= htmlspecialchars($c['fullname'] ?? $c['user_name'] ?? ''); ?><br><span style="font-size:12px;color:#aaa;"><?= htmlspecialchars($c['user_name'] ?? ''); ?></span></td>
                         <td style="font-size:13px;"><?= htmlspecialchars($c['reason']); ?></td>
-                        <td><?= number_format($c['total']); ?>đ</td>
+                        <td><?= number_format($c['order_total'] ?? $c['total'] ?? 0); ?>đ</td>
                         <td style="font-size:12px;color:#aaa;"><?= date('d/m/Y H:i', strtotime($c['created_at'])); ?></td>
                         <td><span class="status-badge" style="background:<?= $colors[$c['status']]; ?>"><?= $labels[$c['status']]; ?></span></td>
                         <td>
@@ -700,22 +732,44 @@ function statusLabel($status) {
                         </td>
                     </tr>
                     <?php endforeach; ?>
-                    <?php if (empty($cancels)): ?>
+                    <?php if (empty($cancellations)): ?>
                         <tr><td colspan="7" style="text-align:center;color:#aaa;padding:24px;">Chưa có yêu cầu hủy nào.</td></tr>
                     <?php endif; ?>
                     </tbody>
                 </table>
+
+                <!-- PHÂN TRANG YÊU CẦU HỦY ĐƠN -->
+                <?php if (!empty($cancelTotalPages) && $cancelTotalPages > 1): ?>
+                    <nav aria-label="Phân trang yêu cầu hủy" class="mt-3">
+                        <ul class="pagination pagination-sm justify-content-end mb-0">
+                            <li class="page-item <?= ($cancelPage <= 1) ? 'disabled' : '' ?>">
+                                <a class="page-link text-dark" href="index.php?url=admin/index&tab=requests&cpage=<?= max(1, $cancelPage - 1) ?>&rpage=<?= $returnPage ?>">&laquo; Trước</a>
+                            </li>
+                            <?php for ($i = 1; $i <= $cancelTotalPages; $i++): ?>
+                                <li class="page-item <?= ($i == $cancelPage) ? 'active' : '' ?>">
+                                    <a class="page-link <?= ($i == $cancelPage) ? 'bg-danger border-danger text-white' : 'text-dark' ?>" 
+                                    href="index.php?url=admin/index&tab=requests&cpage=<?= $i ?>&rpage=<?= $returnPage ?>">
+                                        <?= $i ?>
+                                    </a>
+                                </li>
+                            <?php endfor; ?>
+                            <li class="page-item <?= ($cancelPage >= $cancelTotalPages) ? 'disabled' : '' ?>">
+                                <a class="page-link text-dark" href="index.php?url=admin/index&tab=requests&cpage=<?= min($cancelTotalPages, $cancelPage + 1) ?>&rpage=<?= $returnPage ?>">Sau &raquo;</a>
+                            </li>
+                        </ul>
+                    </nav>
+                <?php endif; ?>
             </div>
 
             <div class="admin-card">
-                <div class="admin-card-header"><h5 class="fw-bold mb-0">Yêu cầu hoàn hàng (<?= count($returns); ?>)</h5></div>
+                <div class="admin-card-header"><h5 class="fw-bold mb-0">Yêu cầu hoàn hàng (<?= $totalReturns; ?>)</h5></div>
                 <table class="admin-table">
                     <thead><tr><th>Đơn #</th><th>Khách hàng</th><th>Lý do</th><th>Ảnh</th><th>Tổng tiền</th><th>Ngày gửi</th><th>Trạng thái</th><th></th></tr></thead>
                     <tbody>
                     <?php foreach ($returns as $r): ?>
                     <tr>
                         <td><strong>#<?= $r['order_id']; ?></strong></td>
-                        <td><?= htmlspecialchars($r['fullname']); ?><br><span style="font-size:12px;color:#aaa;"><?= htmlspecialchars($r['user_name']); ?></span></td>
+                        <td><?= htmlspecialchars($r['fullname'] ?? $r['user_name'] ?? ''); ?><br><span style="font-size:12px;color:#aaa;"><?= htmlspecialchars($r['user_name'] ?? ''); ?></span></td>
                         <td style="font-size:13px;"><?= htmlspecialchars($r['reason']); ?></td>
                         <td>
                             <?php if (!empty($r['image'])): ?>
@@ -724,7 +778,7 @@ function statusLabel($status) {
                                 <span style="color:#bbb;font-size:12px;">—</span>
                             <?php endif; ?>
                         </td>
-                        <td><?= number_format($r['total']); ?>đ</td>
+                        <td><?= number_format($r['order_total'] ?? $r['total'] ?? 0); ?>đ</td>
                         <td style="font-size:12px;color:#aaa;"><?= date('d/m/Y H:i', strtotime($r['created_at'])); ?></td>
                         <td><span class="status-badge" style="background:<?= $colors[$r['status']]; ?>"><?= $labels[$r['status']]; ?></span></td>
                         <td>
@@ -742,10 +796,32 @@ function statusLabel($status) {
                     </tr>
                     <?php endforeach; ?>
                     <?php if (empty($returns)): ?>
-                        <tr><td colspan="7" style="text-align:center;color:#aaa;padding:24px;">Chưa có yêu cầu hoàn hàng nào.</td></tr>
+                        <tr><td colspan="8" style="text-align:center;color:#aaa;padding:24px;">Chưa có yêu cầu hoàn hàng nào.</td></tr>
                     <?php endif; ?>
                     </tbody>
                 </table>
+
+                <!-- PHÂN TRANG YÊU CẦU HOÀN HÀNG (ĐÃ SỬA SANG $returnPage & $returnTotalPages) -->
+                <?php if (!empty($returnTotalPages) && $returnTotalPages > 1): ?>
+                    <nav aria-label="Phân trang yêu cầu hoàn" class="mt-3">
+                        <ul class="pagination pagination-sm justify-content-end mb-0">
+                            <li class="page-item <?= ($returnPage <= 1) ? 'disabled' : '' ?>">
+                                <a class="page-link text-dark" href="index.php?url=admin/index&tab=requests&cpage=<?= $cancelPage ?>&rpage=<?= max(1, $returnPage - 1) ?>">&laquo; Trước</a>
+                            </li>
+                            <?php for ($i = 1; $i <= $returnTotalPages; $i++): ?>
+                                <li class="page-item <?= ($i == $returnPage) ? 'active' : '' ?>">
+                                    <a class="page-link <?= ($i == $returnPage) ? 'bg-danger border-danger text-white' : 'text-dark' ?>" 
+                                    href="index.php?url=admin/index&tab=requests&cpage=<?= $cancelPage ?>&rpage=<?= $i ?>">
+                                        <?= $i ?>
+                                    </a>
+                                </li>
+                            <?php endfor; ?>
+                            <li class="page-item <?= ($returnPage >= $returnTotalPages) ? 'disabled' : '' ?>">
+                                <a class="page-link text-dark" href="index.php?url=admin/index&tab=requests&cpage=<?= $cancelPage ?>&rpage=<?= min($returnTotalPages, $returnPage + 1) ?>">Sau &raquo;</a>
+                            </li>
+                        </ul>
+                    </nav>
+                <?php endif; ?>
             </div>
 
             <!-- =============================== 9. LIVE CHAT =============================== -->
@@ -906,7 +982,7 @@ function statusLabel($status) {
             <!-- =============================== 10. NGƯỜI DÙNG =============================== -->
             <?php elseif ($tab === 'users'): ?>
             <div class="admin-card">
-                <div class="admin-card-header"><h5 class="fw-bold mb-0">Người dùng (<?= count($users_list); ?>)</h5></div>
+                <div class="admin-card-header"><h5 class="fw-bold mb-0">Người dùng (<?= $stat_users; ?>)</h5></div>
                 <table class="admin-table">
                     <thead><tr><th>ID</th><th>Tên</th><th>Email</th><th>Vai trò</th><th></th></tr></thead>
                     <tbody>
@@ -945,6 +1021,27 @@ function statusLabel($status) {
                     <?php endforeach; ?>
                     </tbody>
                 </table>
+                <!-- Phân trang người dùng-->
+                            <?php if (!empty($adminTotalPages) && $adminTotalPages > 1): ?>
+                <nav aria-label="Phân trang người dùng" class="mt-3">
+                    <ul class="pagination pagination-sm justify-content-end mb-0">
+                        <li class="page-item <?= ($adminPage <= 1) ? 'disabled' : '' ?>">
+                            <a class="page-link text-dark" href="index.php?url=admin/index&tab=users&page=<?= max(1, $adminPage - 1) ?>">&laquo; Trước</a>
+                        </li>
+                        <?php for ($i = 1; $i <= $adminTotalPages; $i++): ?>
+                            <li class="page-item <?= ($i == $adminPage) ? 'active' : '' ?>">
+                                <a class="page-link <?= ($i == $adminPage) ? 'bg-danger border-danger text-white' : 'text-dark' ?>" 
+                                href="index.php?url=admin/index&tab=users&page=<?= $i ?>">
+                                    <?= $i ?>
+                                </a>
+                            </li>
+                        <?php endfor; ?>
+                        <li class="page-item <?= ($adminPage >= $adminTotalPages) ? 'disabled' : '' ?>">
+                            <a class="page-link text-dark" href="index.php?url=admin/index&tab=users&page=<?= min($adminTotalPages, $adminPage + 1) ?>">Sau &raquo;</a>
+                        </li>
+                    </ul>
+                </nav>
+            <?php endif; ?>
             </div>
             <?php endif; ?>
         </div>

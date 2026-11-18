@@ -9,13 +9,20 @@
                 <p class="small text-white-50 mb-2">79 Hồ Tùng Mậu, Từ Liêm, Hà Nội</p>
                 <p class="small text-white-50 mb-2">Điện thoại: 070 347 0938</p>
                 <p class="small text-white-50 mb-3">Email: rubiesin2015@gmail.com</p>
-                <div class="d-flex gap-3 text-white fs-5">
-                    <a href="#" class="text-white text-decoration-none"><i class="fa-brands fa-facebook"></i></a>
-                    <a href="#" class="text-white text-decoration-none"><i class="fa-brands fa-instagram"></i></a>
-                    <a href="#" class="text-white text-decoration-none"><i class="fa-brands fa-youtube"></i></a>
-                    <a href="#" class="text-white text-decoration-none"><i class="fa-brands fa-tiktok"></i></a>
+            <div class="d-flex gap-3 text-white fs-5">
+                    <a href="https://www.facebook.com/rubiesin2015" target="_blank" rel="noopener noreferrer" class="text-white text-decoration-none" title="Facebook Rubies">
+                        <i class="fa-brands fa-facebook"></i>
+                    </a>
+                    <a href="https://www.instagram.com/rubies.sg/" target="_blank" rel="noopener noreferrer" class="text-white text-decoration-none" title="Instagram Rubies">
+                        <i class="fa-brands fa-instagram"></i>
+                    </a>
+                    <a href="https://www.youtube.com/@rubiesin2015" target="_blank" rel="noopener noreferrer" class="text-white text-decoration-none" title="YouTube Rubies">
+                        <i class="fa-brands fa-youtube"></i>
+                    </a>
+                    <a href="https://www.tiktok.com/@rubiesin2015" target="_blank" rel="noopener noreferrer" class="text-white text-decoration-none" title="TikTok Rubies">
+                        <i class="fa-brands fa-tiktok"></i>
+                    </a>
                 </div>
-            </div>
 
             <div class="col-md-3">
                 <h6 class="fw-bold text-uppercase mb-3" style="letter-spacing: 1px;">CÔNG TY</h6>
@@ -45,7 +52,7 @@
         </div>
 
         <div class="border-top border-secondary pt-3 text-center small text-white-50">
-            © Bản quyền thuộc về Rubies Rubies | Cung cấp bởi Tran Ngoc Anh
+            © Bản quyền thuộc về Rubies Rubies | Cung cấp bởi Rubies Shop
         </div>
     </div>
 </footer>
@@ -111,8 +118,8 @@
 let sendChat;
 
 document.addEventListener('DOMContentLoaded', function () {
-    const API = 'chat_api.php';
-    const isLogged = <?= !empty($_SESSION['user']) ? 'true' : 'false'; ?>;
+    const API = '<?= rtrim(dirname($_SERVER["SCRIPT_NAME"]), "/\\") ?>/chat_api.php';
+    const isLogged = <?= (!empty($_SESSION['user']['id']) || !empty($_SESSION['user']['user_id'])) ? 'true' : 'false'; ?>;
 
     const toggleBtn   = document.getElementById('chat-toggle-btn');
     const chatBox     = document.getElementById('chat-box');
@@ -224,12 +231,21 @@ document.addEventListener('DOMContentLoaded', function () {
             // Bỏ qua lỗi ngắt kết nối tạm thời
         }
     }
-
-    // 4. Hàm vẽ bong bóng tin nhắn
-    function renderMessageBubble(sender, text, time) {
+    // Hàm định dạng ngày giờ 
+    function formatChatTime(time) {
+        const d = time ? new Date(time.replace(' ', 'T')) : new Date();
+        if (isNaN(d.getTime())) return '';
+        const now = new Date();
+        const hm = d.getHours().toString().padStart(2, '0') + ':' + d.getMinutes().toString().padStart(2, '0');
+        return d.toDateString() === now.toDateString()
+            ? hm
+            : `${d.getDate().toString().padStart(2, '0')}/${(d.getMonth() + 1).toString().padStart(2, '0')} ${hm}`;
+    }
+function renderMessageBubble(sender, text, time = null) {
         const isUser = (sender === 'user');
         const formatted = (text || '').replace(/\n/g, '<br>');
-        const timeStr = time ? `<small class="text-muted d-block mt-1" style="font-size: 10px;">${time.substring(11, 16)}</small>` : '';
+        const displayTime = formatChatTime(time);
+        const timeStr = `<small class="text-muted d-block mt-1" style="font-size: 10px;">${displayTime}</small>`;
 
         if (isUser) {
             chatBody.innerHTML += `
@@ -255,7 +271,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         chatBody.scrollTop = chatBody.scrollHeight;
     }
-
     // 5. Gửi tin nhắn
     sendChat = async function(text) {
         text = (text || '').trim();
@@ -298,6 +313,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (data.user_msg_id) {
                     lastMessageId = Math.max(lastMessageId, parseInt(data.user_msg_id));
                 }
+                if (data.bot_msg_id) {
+                    lastMessageId = Math.max(lastMessageId, parseInt(data.bot_msg_id));
+                }
 
                 // Nếu bot có câu trả lời tự động
                 if (data.reply) {
@@ -332,9 +350,13 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // Khởi chạy vòng lặp Polling kiểm tra tin nhắn mới mỗi 3 giây
+    // Nạp lịch sử và mốc lastMessageId ngay khi vào trang nếu đã đăng nhập
+    if (isLogged) {
+        loadHistory();
+    }
     pollInterval = setInterval(pollNewMessages, 3000);
 });
 </script>
 </body>
 </html>
+

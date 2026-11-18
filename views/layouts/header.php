@@ -83,7 +83,7 @@ $currentUser = $_SESSION['user'] ?? null;
                         <ul class="dropdown-menu dropdown-menu-end border-0 shadow">
                             <li><a class="dropdown-item" href="index.php?url=profile/index">Đơn hàng của bạn</a></li>
                             <?php if ($currentUser['role'] === 'admin'): ?>
-                                <li><a class="dropdown-item text-danger fw-bold" href="admin.php">Trang Quản Trị</a></li>
+                                <li><a class="dropdown-item text-danger fw-bold" href="index.php?url=admin/index">Trang Quản Trị</a></li>
                             <?php endif; ?>
                             <li><hr class="dropdown-divider"></li>
                             <li><a class="dropdown-item text-secondary" href="index.php?url=auth/logout">Đăng xuất</a></li>

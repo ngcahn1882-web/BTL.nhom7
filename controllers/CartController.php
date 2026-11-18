@@ -20,6 +20,12 @@ class CartController extends Controller {
     }
 
     public function add(): void {
+        if (session_status() === PHP_SESSION_NONE) session_start();
+        if (!isset($_SESSION['user'])) {
+            $_SESSION['redirect_after_login'] = $_SERVER['HTTP_REFERER'] ?? 'index.php?url=home/index';
+            echo "<script>alert('Vui lòng đăng nhập để thêm sản phẩm vào giỏ hàng!'); window.location='index.php?url=auth/login';</script>";
+            exit;
+        }
         $productId = (int)($_POST['product_id'] ?? $_GET['id'] ?? 0);
         $color     = trim($_POST['color'] ?? $_GET['color'] ?? '');
         $size      = trim($_POST['size'] ?? $_GET['size'] ?? '');
@@ -34,9 +40,14 @@ class CartController extends Controller {
         $product = $this->productModel->getById($productId);
         if (!$product) $this->redirect('home/index');
 
+        $key = "{$productId}_{$color}_{$size}";
+        $currentItems  = $this->cartModel->getItems();
+        $currentInCart = (int)($currentItems[$key]['qty'] ?? 0);
+        $neededQty     = ($action === 'buy') ? $qty : ($currentInCart + $qty);
+
         $stock = $this->productModel->getVariantStock($productId, $color, $size);
-        if ($stock < $qty) {
-            echo "<script>alert('Phân loại này hiện chỉ còn {$stock} sản phẩm!'); history.back();</script>";
+        if ($stock < $neededQty) {
+            echo "<script>alert('Phân loại này chỉ còn {$stock} sản phẩm (trong giỏ đã có {$currentInCart})!'); history.back();</script>";
             return;
         }
 
@@ -66,6 +77,33 @@ class CartController extends Controller {
         }
     }
 
+    public function update(): void {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $key   = $_POST['key'] ?? '';
+            $qty   = (int)($_POST['qty'] ?? 1);
+            $items = $this->cartModel->getItems();
+
+            if (isset($items[$key])) {
+                $item  = $items[$key];
+                $stock = $this->productModel->getVariantStock((int)$item['id'], $item['color'], $item['size']);
+                if ($qty > $stock) {
+                    echo "<script>alert('Phân loại này hiện chỉ còn tối đa {$stock} sản phẩm!'); window.location='index.php?url=cart/index';</script>";
+                    return;
+                }
+                $this->cartModel->updateQuantity($key, $qty);
+            }
+        }
+        $this->redirect('cart/index');
+    }
+
+    public function remove(string $key = ''): void {
+        $key = urldecode($key);
+        if ($key !== '') {
+            $this->cartModel->remove($key);
+        }
+        $this->redirect('cart/index');
+    }
+
     public function prepareCheckout(): void {
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && !empty($_POST['selected_items'])) {
             $this->cartModel->setSelectedKeys($_POST['selected_items']);
@@ -76,7 +114,6 @@ class CartController extends Controller {
     }
 
     public function checkout(): void {
-        // Yêu cầu đăng nhập trước khi vào trang thanh toán
         if (session_status() === PHP_SESSION_NONE) session_start();
         if (!isset($_SESSION['user'])) {
             echo "<script>alert('Vui lòng đăng nhập để tiến hành đặt hàng!'); window.location='index.php?url=auth/login';</script>";
@@ -111,7 +148,6 @@ class CartController extends Controller {
         if (empty($checkoutItems)) $this->redirect('cart/index');
 
         $phone = trim($_POST['phone'] ?? '');
-        // Kiểm tra số điện thoại: đúng 10 số và bắt đầu bằng số 0
         if (!preg_match('/^0[0-9]{9}$/', $phone)) {
             echo "<script>alert('Số điện thoại không hợp lệ! Vui lòng nhập đúng 10 chữ số bắt đầu bằng số 0.'); history.back();</script>";
             return;
@@ -148,18 +184,22 @@ class CartController extends Controller {
                 echo "<script>alert('Đặt hàng thành công!'); window.location.href='index.php?url=profile/index';</script>";
             }
         } catch (Exception $e) {
-            echo "Lỗi khi đặt hàng: " . $e->getMessage();
+            $errMsg = addslashes($e->getMessage());
+            echo "<script>alert('Lỗi khi đặt hàng: {$errMsg}'); window.location.href='index.php?url=cart/index';</script>";
         }
     }
 
-    // Hiển thị VietQR chuẩn MB Bank theo tài khoản của bạn
-    public function payQr(int $orderId): void {
+    public function payQr(int $orderId = 0): void {
+        if (session_status() === PHP_SESSION_NONE) session_start();
+        $userId = (int)($_SESSION['user']['id'] ?? 0);
+        if ($userId <= 0) $this->redirect('auth/login');
+
         $db = Database::getConnection();
-        $stmt = $db->prepare("SELECT total, fullname FROM orders WHERE id = ?");
-        $stmt->execute([$orderId]);
+        $stmt = $db->prepare("SELECT total, fullname FROM orders WHERE id = ? AND user_id = ?");
+        $stmt->execute([$orderId, $userId]);
         $order = $stmt->fetch();
 
-        if (!$order) die("Không tìm thấy đơn hàng.");
+        if (!$order) die("Không tìm thấy đơn hàng hoặc bạn không có quyền truy cập.");
 
         $bankId      = "MB";
         $accountNo   = "0986448310";

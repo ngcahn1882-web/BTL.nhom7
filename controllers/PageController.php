@@ -10,11 +10,22 @@ class PageController extends Controller {
     }
 
     public function sale(): void {
-        $saleProducts = $this->productModel->getSaleProducts();
-        $this->view('pages/sale', [
-            'products' => $saleProducts
-        ]);
-    }
+            $limit         = 8; // 8 sản phẩm / trang
+            $page          = max(1, (int)($_GET['page'] ?? 1));
+            $totalProducts = $this->productModel->countSaleProducts();
+            $totalPages    = max(1, (int)ceil($totalProducts / $limit));
+            $page          = min($page, $totalPages);
+            $offset        = ($page - 1) * $limit;
+
+            $saleProducts  = $this->productModel->getSaleProducts($limit, $offset);
+
+            $this->view('pages/sale', [
+                'products'      => $saleProducts,
+                'currentPage'   => $page,
+                'totalPages'    => $totalPages,
+                'totalProducts' => $totalProducts
+            ]);
+        }
 
     public function policy(): void {
         $type = $_GET['type'] ?? 'loyalty';
@@ -90,11 +101,27 @@ class PageController extends Controller {
     }
 
     public function search(): void {
-        $q = trim($_GET['q'] ?? '');
-        $results = $this->productModel->search($q);
-        $this->view('pages/search', [
-            'keyword' => $q,
-            'results' => $results
-        ]);
-    }
+            $q          = trim($_GET['q'] ?? '');
+            $priceRange = trim($_GET['price'] ?? '');
+            $sort       = trim($_GET['sort'] ?? 'newest');
+
+            $limit         = 8; // 8 sản phẩm / trang (lưới 4 cột x 2 hàng)
+            $page          = max(1, (int)($_GET['page'] ?? 1));
+            $totalProducts = $this->productModel->countSearch($q, $priceRange);
+            $totalPages    = max(1, (int)ceil($totalProducts / $limit));
+            $page          = min($page, $totalPages);
+            $offset        = ($page - 1) * $limit;
+
+            $results = $this->productModel->search($q, $priceRange, $sort, $limit, $offset);
+
+            $this->view('pages/search', [
+                'keyword'       => $q,
+                'priceRange'    => $priceRange,
+                'sort'          => $sort,
+                'results'       => $results,
+                'currentPage'   => $page,
+                'totalPages'    => $totalPages,
+                'totalProducts' => $totalProducts
+            ]);
+        }
 }

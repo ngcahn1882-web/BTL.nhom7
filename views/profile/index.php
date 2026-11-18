@@ -165,6 +165,31 @@ function getStatusBadge($status) {
                         </div>
                         <?php endforeach; ?>
                     <?php endif; ?>
+                <!-- PHÂN TRANG ĐƠN HÀNG CÁ NHÂN -->
+                        <?php if (!empty($totalOrderPages) && $totalOrderPages > 1): ?>
+                            <nav aria-label="Phân trang đơn hàng" class="mt-4">
+                                <ul class="pagination pagination-sm justify-content-center mb-0">
+                                    <li class="page-item <?= ($orderPage <= 1) ? 'disabled' : '' ?>">
+                                        <a class="page-link text-dark" href="index.php?url=profile/index&tab=orders&page=<?= max(1, $orderPage - 1) ?>">
+                                            <i class="fa-solid fa-chevron-left small"></i>
+                                        </a>
+                                    </li>
+                                    <?php for ($i = 1; $i <= $totalOrderPages; $i++): ?>
+                                        <li class="page-item <?= ($i == $orderPage) ? 'active' : '' ?>">
+                                            <a class="page-link <?= ($i == $orderPage) ? 'bg-danger border-danger text-white' : 'text-dark' ?>" 
+                                               href="index.php?url=profile/index&tab=orders&page=<?= $i ?>">
+                                                <?= $i ?>
+                                            </a>
+                                        </li>
+                                    <?php endfor; ?>
+                                    <li class="page-item <?= ($orderPage >= $totalOrderPages) ? 'disabled' : '' ?>">
+                                        <a class="page-link text-dark" href="index.php?url=profile/index&tab=orders&page=<?= min($totalOrderPages, $orderPage + 1) ?>">
+                                            <i class="fa-solid fa-chevron-right small"></i>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </nav>
+                        <?php endif; ?>
 
                 <!-- TAB THÔNG TIN CÁ NHÂN -->
                 <?php elseif ($tab === 'info'): ?>
@@ -281,7 +306,8 @@ function getStatusBadge($status) {
 
           <div class="mb-3">
             <label class="form-label fw-semibold small">Tải lên hình ảnh thực tế (nếu có):</label>
-            <input type="file" name="review_image" class="form-control form-control-sm" accept="image/*">
+            <input type="file" name="review_image" id="modal-review-img-input" class="form-control form-control-sm" accept="image/jpeg,image/png,image/webp">
+            <div id="modal-review-img-preview" class="mt-2"></div>
           </div>
 
           <button type="submit" class="btn btn-danger w-100 py-2 fw-bold" style="background-color: #8B1A2F !important; border: none;">
@@ -306,10 +332,17 @@ function openReviewModal(prodId, prodName, prodImg) {
     document.getElementById('rv-product-id').value = prodId;
     document.getElementById('rv-product-name').textContent = prodName;
     document.getElementById('rv-product-img').src = prodImg;
+
+    // Reset ảnh cũ nếu trước đó đã chọn
+    const imgInput = document.getElementById('modal-review-img-input');
+    const imgPreview = document.getElementById('modal-review-img-preview');
+    if (imgInput) imgInput.value = '';
+    if (imgPreview) imgPreview.innerHTML = '';
+
     new bootstrap.Modal(document.getElementById('reviewModal')).show();
 }
 
-document.addEventListener('DOMContentLoaded', function() {
+    document.addEventListener('DOMContentLoaded', function() {
     // Xử lý click chọn sao trong Modal
     const starPicker = document.getElementById('modal-star-picker');
     const ratingInput = document.getElementById('modal-rating-val');
@@ -324,6 +357,39 @@ document.addEventListener('DOMContentLoaded', function() {
                     s.className = (sVal <= val) ? 'fa-solid fa-star' : 'fa-regular fa-star';
                 });
             });
+        });
+    }
+    // Xem trước ảnh trong Modal Đánh giá + Nút xóa nếu chọn nhầm
+    const modalImgInput = document.getElementById('modal-review-img-input');
+    const modalImgPreview = document.getElementById('modal-review-img-preview');
+    if (modalImgInput && modalImgPreview) {
+        modalImgInput.addEventListener('change', function() {
+            modalImgPreview.innerHTML = '';
+            if (this.files && this.files[0]) {
+                const file = this.files[0];
+                if (!file.type.startsWith('image/')) {
+                    alert('Vui lòng chỉ chọn tệp hình ảnh (JPG, PNG, WEBP)!');
+                    this.value = '';
+                    return;
+                }
+                const reader = new FileReader();
+                reader.onload = function(ev) {
+                    modalImgPreview.innerHTML = `
+                        <div class="position-relative d-inline-block mt-1">
+                            <img src="${ev.target.result}" class="rounded border shadow-sm" style="width: 100px; height: 100px; object-fit: cover;">
+                            <button type="button" id="btn-remove-modal-img" class="btn btn-danger btn-sm rounded-circle position-absolute top-0 end-0 translate-middle p-0 d-flex align-items-center justify-content-center shadow" style="width: 22px; height: 22px;" title="Xóa ảnh đã chọn">
+                                <i class="fa-solid fa-xmark" style="font-size: 11px;"></i>
+                            </button>
+                        </div>
+                        <div class="small text-success mt-1"><i class="fa-solid fa-check me-1"></i>Xem trước ảnh (bấm dấu ✕ để chọn lại)</div>
+                    `;
+                    document.getElementById('btn-remove-modal-img').addEventListener('click', function() {
+                        modalImgInput.value = '';
+                        modalImgPreview.innerHTML = '';
+                    });
+                };
+                reader.readAsDataURL(file);
+            }
         });
     }
 });

@@ -79,23 +79,38 @@ class ProfileController extends Controller {
         }
 
         // 3. Yêu cầu hoàn hàng
+// 3. Yêu cầu hoàn hàng (Kiểm tra chủ sở hữu & đơn đã giao thành công)
         if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['request_return'])) {
             $orderId = (int)$_POST['order_id'];
             $reason  = trim($_POST['reason'] ?? '');
-            $imageName = null;
+            $chkOrd  = $db->prepare("SELECT status FROM orders WHERE id = ? AND user_id = ?");
+            $chkOrd->execute([$orderId, $userId]);
+            $ord = $chkOrd->fetch();
 
-            if (!empty($_FILES['return_image']['name'])) {
-                $ext = strtolower(pathinfo($_FILES['return_image']['name'], PATHINFO_EXTENSION));
-                $allowed = ['jpg', 'jpeg', 'png', 'webp'];
-                if (in_array($ext, $allowed) && $_FILES['return_image']['size'] <= 5 * 1024 * 1024) {
-                    $imageName = 'return_' . uniqid() . '.' . $ext;
-                    move_uploaded_file($_FILES['return_image']['tmp_name'], 'uploads/' . $imageName);
+            if ($ord && $ord['status'] === 'done' && $reason !== '') {
+                $chkReq = $db->prepare("SELECT id FROM order_returns WHERE order_id = ?");
+                $chkReq->execute([$orderId]);
+                if (!$chkReq->fetch()) {
+                    $imageName = null;
+                    if (!empty($_FILES['return_image']['name'])) {
+                        $ext = strtolower(pathinfo($_FILES['return_image']['name'], PATHINFO_EXTENSION));
+                        $allowed = ['jpg', 'jpeg', 'png', 'webp'];
+                        if (in_array($ext, $allowed) && $_FILES['return_image']['size'] <= 5 * 1024 * 1024) {
+                            $imageName = 'return_' . uniqid() . '.' . $ext;
+                            move_uploaded_file($_FILES['return_image']['tmp_name'], 'uploads/' . $imageName);
+                        }
+                    }
+                    $this->requestModel->createReturnRequest($orderId, $userId, $reason, $imageName);
+                    $msg = 'Đã gửi yêu cầu hoàn hàng, vui lòng chờ admin xét duyệt.';
+                    $msg_type = 'success';
+                } else {
+                    $msg = 'Bạn đã gửi yêu cầu hoàn hàng cho đơn này rồi!';
+                    $msg_type = 'danger';
                 }
+            } else {
+                $msg = 'Chỉ có thể yêu cầu hoàn hàng cho đơn đã giao thành công!';
+                $msg_type = 'danger';
             }
-
-            $this->requestModel->createReturnRequest($orderId, $userId, $reason, $imageName);
-            $msg = 'Đã gửi yêu cầu hoàn hàng, vui lòng chờ admin xét duyệt.';
-            $msg_type = 'success';
             $tab = 'orders';
         }
 
@@ -124,7 +139,14 @@ class ProfileController extends Controller {
         }
 
         // 5. Lấy danh sách đơn hàng & trạng thái kèm theo
-        $orders = $this->orderModel->getOrdersByUserId($userId);
+        $orderLimit      = 5;
+        $orderPage       = max(1, (int)($_GET['page'] ?? 1));
+        $totalOrders     = $this->orderModel->countOrdersByUserId($userId);
+        $totalOrderPages = max(1, (int)ceil($totalOrders / $orderLimit));
+        $orderPage       = min($orderPage, $totalOrderPages);
+        $orderOffset     = ($orderPage - 1) * $orderLimit;
+
+        $orders = $this->orderModel->getOrdersByUserIdPaginated($userId, $orderLimit, $orderOffset);
         $cancelMap = [];
         $returnMap = [];
         $reviewedMap = [];
@@ -138,6 +160,12 @@ class ProfileController extends Controller {
         foreach ($db->query("SELECT product_id, order_id FROM reviews WHERE user_id = {$userId}")->fetchAll() as $rv) {
             $reviewedMap[$rv['product_id'] . '_' . ($rv['order_id'] ?? 0)] = true;
         }
+        foreach ($db->query("SELECT order_id, status FROM order_cancellations WHERE user_id = {$userId} ORDER BY id ASC")->fetchAll() as $c) {
+            $cancelMap[$c['order_id']] = $c['status'];
+        }
+        foreach ($db->query("SELECT order_id, status FROM order_returns WHERE user_id = {$userId} ORDER BY id ASC")->fetchAll() as $r) {
+            $returnMap[$r['order_id']] = $r['status'];
+        }
 
         // Danh sách ID sản phẩm đã đánh giá (phục vụ kiểm tra 1 lần)
         $reviewedProductIds = $this->reviewModel->getReviewedProductIds($userId);
@@ -145,42 +173,36 @@ class ProfileController extends Controller {
 
         // Truyền đầy đủ dữ liệu một lần duy nhất sang View
         $this->view('profile/index', [
-            'tab'                => $tab,
-            'msg'                => $msg,
-            'msg_type'           => $msg_type,
-            'user'               => $user,
-            'orders'             => $orders,
-            'cancelMap'          => $cancelMap,
-            'returnMap'          => $returnMap,
-            'reviewedMap'        => $reviewedMap,
-            'reviewedProductIds' => $reviewedProductIds
+            'user'            => $user,
+            'tab'             => $tab,
+            'msg'             => $msg,
+            'msg_type'        => $msg_type,
+            'orders'          => $orders,
+            'cancelMap'       => $cancelMap,
+            'returnMap'       => $returnMap,
+            'reviewedMap'     => $reviewedMap ?? [],
+            'orderPage'       => $orderPage,
+            'totalOrderPages' => $totalOrderPages
         ]);
     }
 
-    public function submitReview(): void {
-        if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_SESSION['user'])) {
-            $productId = (int)$_POST['product_id'];
-            $rating    = max(1, min(5, (int)$_POST['rating']));
-            $comment   = trim($_POST['comment'] ?? '');
-            $userId    = (int)$_SESSION['user']['id'];
-            $imageName = '';
-
-            if (!empty($_FILES['review_image']['name'])) {
-                $ext = strtolower(pathinfo($_FILES['review_image']['name'], PATHINFO_EXTENSION));
-                $imageName = 'rev_' . uniqid() . '.' . $ext;
-                move_uploaded_file($_FILES['review_image']['tmp_name'], 'uploads/' . $imageName);
-            }
-
-            if (!$this->reviewModel->hasReviewed($userId, $productId)) {
-                $this->reviewModel->addReview($userId, $productId, $rating, $comment, $imageName);
-            }
-            $this->redirect('profile/index&tab=orders');
-        }
-    }
 
     public function favorites(): void {
-        $userId    = (int)$_SESSION['user']['id'];
-        $favorites = $this->favModel->getUserFavorites($userId);
-        $this->view('profile/favorites', ['favorites' => $favorites]);
-    }
+            $userId     = (int)$_SESSION['user']['id'];
+            $limit      = 8;
+            $page       = max(1, (int)($_GET['page'] ?? 1));
+            $totalItems = $this->favModel->countUserFavorites($userId);
+            $totalPages = max(1, (int)ceil($totalItems / $limit));
+            $page       = min($page, $totalPages);
+            $offset     = ($page - 1) * $limit;
+
+            $favorites = $this->favModel->getUserFavorites($userId, $limit, $offset);
+
+            $this->view('profile/favorites', [
+                'favorites'   => $favorites,
+                'currentPage' => $page,
+                'totalPages'  => $totalPages,
+                'totalItems'  => $totalItems
+            ]);
+        }
 }
