@@ -104,11 +104,23 @@ function getStatusBadge($status) {
                                         
                                         <!-- CHỈ ĐƠN HOÀN THÀNH MỚI XÉT ĐÁNH GIÁ -->
                                         <?php if ($order['status'] === 'done'): ?>
-                                            <?php if ($isReviewed): ?>
-                                                <!-- ĐÃ ĐÁNH GIÁ RỒI (Ở TRANG NÀY HOẶC TRANG CHI TIẾT SẢN PHẨM) -->
-                                                <span class="badge bg-light text-secondary border py-1 px-2 fw-normal mt-1">
-                                                    <i class="fa-solid fa-circle-check text-success me-1"></i>Đã đánh giá
-                                                </span>
+                                            <?php if ($isReviewed): 
+                                                $revDetail = $userReviewsMap[(int)$it['product_id']] ?? ['rating' => 5, 'comment' => '', 'image' => '', 'created_at' => ''];
+                                                $revJson = htmlspecialchars(json_encode([
+                                                    'name'       => $it['name'],
+                                                    'prod_img'   => 'uploads/' . $thumb,
+                                                    'rating'     => $revDetail['rating'],
+                                                    'comment'    => $revDetail['comment'],
+                                                    'rev_img'    => !empty($revDetail['image']) ? 'uploads/' . $revDetail['image'] : '',
+                                                    'created_at' => $revDetail['created_at']
+                                                ], JSON_UNESCAPED_UNICODE), ENT_QUOTES, 'UTF-8');
+                                            ?>
+                                                <!-- ĐÃ ĐÁNH GIÁ: BẤM ĐỂ XEM LẠI CHI TIẾT -->
+                                                <button type="button" class="btn btn-sm btn-outline-success mt-1 py-0 px-2 fw-semibold"
+                                                        onclick="openViewReviewModal(this)"
+                                                        data-review="<?= $revJson ?>">
+                                                    <i class="fa-solid fa-eye me-1"></i>Xem đánh giá
+                                                </button>
                                             <?php else: ?>
                                                 <!-- CHƯA ĐÁNH GIÁ: MỞ MODAL ĐÁNH GIÁ -->
                                                 <button type="button" class="btn btn-sm btn-outline-warning mt-1 py-0 px-2 text-dark fw-semibold"
@@ -148,17 +160,23 @@ function getStatusBadge($status) {
                                 <?php endif; ?>
 
                                 <?php if ($order['status'] === 'done'): ?>
-                                    <?php if (!isset($returnMap[$order['id']])): ?>
+                                    <?php if (isset($returnMap[$order['id']])): ?>
+                                        <?php if ($returnMap[$order['id']] === 'pending'): ?>
+                                            <span class="small text-purple fw-semibold" style="color:#8e44ad;"><i class="fa-solid fa-clock me-1"></i>Đang chờ duyệt hoàn hàng</span>
+                                        <?php elseif ($returnMap[$order['id']] === 'approved'): ?>
+                                            <span class="small text-success fw-semibold"><i class="fa-solid fa-circle-check me-1"></i>Đã duyệt hoàn hàng</span>
+                                        <?php elseif ($returnMap[$order['id']] === 'rejected'): ?>
+                                            <span class="small text-danger fw-semibold"><i class="fa-solid fa-circle-xmark me-1"></i>Yêu cầu hoàn bị từ chối</span>
+                                        <?php endif; ?>
+                                    <?php elseif (!empty($reviewedOrderMap[$order['id']])): ?>
+                                        <span class="badge bg-light text-secondary border py-2 px-2" title="Sản phẩm trong đơn đã được đánh giá nên không hỗ trợ hoàn trả">
+                                            <i class="fa-solid fa-lock me-1"></i>Đã đánh giá (Không thể hoàn)
+                                        </span>
+                                    <?php else: ?>
                                         <button class="btn btn-sm btn-outline-purple" style="border-color:#8e44ad; color:#8e44ad;"
                                                 onclick="openRequestModal('return', <?= $order['id'] ?>)">
                                             <i class="fa-solid fa-rotate-left me-1"></i> Yêu cầu hoàn hàng
                                         </button>
-                                    <?php elseif ($returnMap[$order['id']] === 'pending'): ?>
-                                        <span class="small text-purple fw-semibold" style="color:#8e44ad;"><i class="fa-solid fa-clock me-1"></i>Đang chờ duyệt hoàn hàng</span>
-                                    <?php elseif ($returnMap[$order['id']] === 'approved'): ?>
-                                        <span class="small text-success fw-semibold"><i class="fa-solid fa-circle-check me-1"></i>Đã duyệt hoàn hàng</span>
-                                    <?php elseif ($returnMap[$order['id']] === 'rejected'): ?>
-                                        <span class="small text-danger fw-semibold"><i class="fa-solid fa-circle-xmark me-1"></i>Yêu cầu hoàn bị từ chối</span>
                                     <?php endif; ?>
                                 <?php endif; ?>
                             </div>
@@ -318,7 +336,44 @@ function getStatusBadge($status) {
     </div>
   </div>
 </div>
+<!-- Modal Xem lại Đánh giá của khách hàng -->
+<div class="modal fade" id="viewReviewModal" tabindex="-1">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content rounded-4 border-0 shadow-lg overflow-hidden">
+      <div class="modal-header py-3 text-white" style="background-color: #8B1A2F !important;">
+        <div class="d-flex align-items-center gap-2">
+          <img id="vrv-product-img" src="" class="rounded border border-light" style="width: 45px; height: 55px; object-fit: cover;">
+          <div>
+            <span class="small text-white-50 d-block">Đánh giá của bạn</span>
+            <h6 class="modal-title fw-bold mb-0 text-white" id="vrv-product-name"></h6>
+          </div>
+        </div>
+        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+      </div>
+      <div class="modal-body p-4">
+        <div class="d-flex justify-content-between align-items-center mb-3 pb-2 border-bottom">
+          <div id="vrv-stars" class="text-warning fs-5"></div>
+          <small class="text-muted" id="vrv-date"></small>
+        </div>
 
+        <div class="mb-3">
+          <label class="form-label fw-semibold small text-muted mb-1">Nhận xét đã gửi:</label>
+          <div id="vrv-comment" class="p-3 bg-light rounded border small text-dark" style="line-height: 1.6; white-space: pre-line;"></div>
+        </div>
+
+        <div id="vrv-image-wrap" class="mb-2" style="display: none;">
+          <label class="form-label fw-semibold small text-muted mb-1">Hình ảnh thực tế đã tải lên:</label>
+          <div>
+            <img id="vrv-rev-img" src="" class="rounded border shadow-sm" style="max-width: 160px; max-height: 160px; object-fit: cover; cursor: pointer;" onclick="window.open(this.src)" title="Bấm để xem ảnh lớn">
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer bg-light py-2">
+        <button type="button" class="btn btn-secondary btn-sm px-4" data-bs-dismiss="modal">Đóng</button>
+      </div>
+    </div>
+  </div>
+</div>
 <script>
 function openRequestModal(type, orderId) {
     document.getElementById('req-order-id').value = orderId;
@@ -393,6 +448,33 @@ function openReviewModal(prodId, prodName, prodImg) {
         });
     }
 });
+function openViewReviewModal(btn) {
+    const data = JSON.parse(btn.getAttribute('data-review'));
+    document.getElementById('vrv-product-name').textContent = data.name;
+    document.getElementById('vrv-product-img').src = data.prod_img;
+    document.getElementById('vrv-date').textContent = data.created_at ? ('Gửi lúc: ' + data.created_at) : '';
+    document.getElementById('vrv-comment').textContent = data.comment || '(Không có nội dung nhận xét)';
+
+    // Render số sao
+    let starsHtml = '';
+    for (let i = 1; i <= 5; i++) {
+        starsHtml += `<i class="fa-solid fa-star ${i <= data.rating ? 'text-warning' : 'text-secondary opacity-25'} me-1"></i>`;
+    }
+    document.getElementById('vrv-stars').innerHTML = starsHtml;
+
+    // Hiển thị ảnh nếu có
+    const imgWrap = document.getElementById('vrv-image-wrap');
+    const revImg = document.getElementById('vrv-rev-img');
+    if (data.rev_img) {
+        revImg.src = data.rev_img;
+        imgWrap.style.display = 'block';
+    } else {
+        revImg.src = '';
+        imgWrap.style.display = 'none';
+    }
+
+    new bootstrap.Modal(document.getElementById('viewReviewModal')).show();
+}
 </script>
 
 <?php require_once 'views/layouts/footer.php'; ?>

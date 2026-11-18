@@ -23,6 +23,7 @@
                         <i class="fa-brands fa-tiktok"></i>
                     </a>
                 </div>
+        </div>
 
             <div class="col-md-3">
                 <h6 class="fw-bold text-uppercase mb-3" style="letter-spacing: 1px;">CÔNG TY</h6>
